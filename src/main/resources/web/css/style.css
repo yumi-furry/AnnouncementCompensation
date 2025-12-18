@@ -1,0 +1,175 @@
+/* 全局重置 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* 滚动条美化 */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #165DFF;
+}
+
+/* 导航项样式 */
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 6px;
+    color: #1D2129;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+}
+
+.nav-item:hover {
+    background-color: #f5f7fa;
+}
+
+.nav-item.active {
+    background-color: #e8f3ff;
+    color: #165DFF;
+    border-left-color: #165DFF;
+}
+
+/* 模态框样式 */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+}
+
+.modal.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-content {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    transform: translateY(-20px);
+    transition: all 0.2s ease;
+}
+
+.modal.show .modal-content {
+    transform: translateY(0);
+}
+
+.modal-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.modal-close {
+    background: transparent;
+    border: none;
+    font-size: 18px;
+    color: #666;
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s ease;
+}
+
+.modal-close:hover {
+    background-color: #f5f7fa;
+    color: #165DFF;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-footer {
+    padding: 12px 20px;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+/* 提示框样式 */
+#toast.success {
+    background-color: #00B42A;
+    color: white;
+}
+
+#toast.error {
+    background-color: #F53F3F;
+    color: white;
+}
+
+#toast.warning {
+    background-color: #FF7D00;
+    color: white;
+}
+
+#toast.show {
+    transform: translateX(0);
+}
+
+/* 表格样式增强 */
+table tr:hover {
+    background-color: #f9fafb;
+}
+
+table td, table th {
+    font-size: 14px;
+}
+
+/* 按钮禁用样式 */
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* 响应式适配 */
+@media (max-width: 768px) {
+    .nav-item span {
+        display: none;
+    }
+
+    .nav-item {
+        justify-content: center;
+    }
+
+    .modal-content {
+        width: 90% !important;
+    }
+}

@@ -1,0 +1,21 @@
+# Web管理面板配置
+web:
+  port: 8080                  # 访问端口
+  login:
+    username: admin           # 管理员账号（默认）
+    # 若使用明文密码，这里会在第一次启动时自动加密并保存为BCrypt哈希；也可以直接填写BCrypt哈希值
+    password: "$2a$10$xxxxxx"  # BCrypt加密密码（默认：admin123）
+
+# 公告配置
+announcement:
+  enable: true                # 是否启用公告推送
+  delay: 3                    # 玩家登录后延迟N秒推送公告
+
+# 补偿配置
+compensation:
+  item:
+    material: PAPER           # 补偿领取道具材质（默认纸张）
+    name: "§6公告补偿领取券"   # 道具名称（支持颜色代码）
+    lore:                     # 道具描述
+      - "§7点击领取服务器公告补偿"
+      - "§7领取后自动绑定账号"

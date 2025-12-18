@@ -1,0 +1,53 @@
+# 插件基础信息（必填）
+name: AnnouncementCompensation
+version: 0.0.1
+api: "Paper"
+main: com.server.AnnouncementCompensationPlugin
+api-version: 1.19  # 适配Paper 1.19.2，必须指定1.19（Bukkit/Paper 1.19+ 要求）
+authors: [ "玉米 <3783260249@qq.com>" ]
+description: "Paper 1.19.2 公告&补偿插件，带Web管理面板，支持白名单/定时公告/补偿领取"
+website: "https://plugin.furrynewyearseve.cn"
+repository: "https://github.com/yumi-furry/AnnouncementCompensation"
+
+# 插件加载顺序（可选，确保依赖Paper核心加载完成）
+load: POSTWORLD
+depend: [ "Paper" ]  # 依赖Paper核心，避免加载顺序问题
+
+# 权限节点（与WebPermission枚举完全对应）
+permissions:
+  ac.web.*:
+    description: "拥有所有Web面板管理权限"
+    default: op  # OP默认拥有该权限
+  ac.web.announcement:
+    description: "Web面板公告增删改查权限"
+    default: op
+  ac.web.compensation:
+    description: "Web面板补偿增删改查权限"
+    default: op
+  ac.web.whitelist:
+    description: "Web面板白名单增删/启用禁用权限"
+    default: op
+  ac.web.log:
+    description: "Web面板查看补偿领取日志权限"
+    default: op
+  ac.game.compensation:
+    description: "游戏内查看/领取补偿权限"
+    default: true
+  ac.game.announcement:
+    description: "游戏内管理公告权限"
+    default: op
+
+# 命令配置（可选，若需添加游戏内命令可在此配置）
+commands:
+  compensation:
+    description: "查看/领取补偿"
+    usage: "/<command> [list/claim]"
+    aliases: [ "comp", "补偿" ]
+    permission: "ac.game.compensation"
+    permission-message: "&c你没有使用该命令的权限！"
+  announcement:
+    description: "管理公告"
+    usage: "/<command> [list/send <公告ID>]"
+    aliases: [ "ann", "公告" ]
+    permission: "ac.game.announcement"
+    permission-message: "&c你没有使用该命令的权限！"
