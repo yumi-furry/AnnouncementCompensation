@@ -193,6 +193,11 @@ mvn clean package
 - 创建GitHub Issue
 - 发送邮件至开发者邮箱
 
+## 开发者信息
+- 开发者：玉米
+- 开发者邮箱：3783260249@qq.com
+- 配置文档：https://plugin.furrynewyearseve.cn/
+
 ## 许可协议
 
 本项目采用CC BY-SA开源协议
