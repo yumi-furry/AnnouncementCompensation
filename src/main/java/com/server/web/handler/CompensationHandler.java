@@ -9,6 +9,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
 
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,12 +23,11 @@ public class CompensationHandler implements HttpHandler {
     private final LoginHandler loginHandler;
 
     /**
-     * 构造方法：从插件主类获取LoginHandler实例（修复核心）
+     * 构造方法：从插件主类获取LoginHandler实例
      * @param plugin 插件主类实例
      */
     public CompensationHandler(AnnouncementCompensationPlugin plugin) {
         this.plugin = plugin;
-        // 修复点：删除错误的getHandlerByPath调用，从插件主类获取LoginHandler
         this.loginHandler = plugin.getLoginHandler();
     }
 
@@ -81,27 +81,49 @@ public class CompensationHandler implements HttpHandler {
     }
 
     /**
-     * 添加新补偿
+     * 添加新补偿（异步接收请求体并在工作线程处理）
      */
     private void handleAddCompensation(HttpServerExchange exchange) {
-        try {
-            String requestBody = new String(exchange.getInputStream().readAllBytes());
-            Compensation compensation = GsonUtils.getGson().fromJson(requestBody, Compensation.class);
-            
-            if (compensation.getName() == null || compensation.getDescription() == null) {
-                sendErrorResponse(exchange, StatusCodes.BAD_REQUEST, "补偿名称/说明不能为空");
-                return;
-            }
+        exchange.getRequestReceiver().receiveFullBytes((ex, bytes) -> {
+            ex.dispatch(() -> {
+                try {
+                    if (bytes == null || bytes.length == 0) {
+                        sendErrorResponse(ex, StatusCodes.BAD_REQUEST, "请求体为空");
+                        return;
+                    }
+                    // 使用UTF-8编码解析请求体
+                    String message = new String(bytes, StandardCharsets.UTF_8);
+                    Compensation compensation;
+                    try {
+                        compensation = GsonUtils.getGson().fromJson(message, Compensation.class);
+                    } catch (Exception je) {
+                        plugin.getLogger().warning("⚠️ 解析补偿请求JSON失败：" + je.getMessage());
+                        sendErrorResponse(ex, StatusCodes.BAD_REQUEST, "请求体格式不正确（非JSON）");
+                        return;
+                    }
 
-            plugin.getDataManager().saveCompensation(compensation);
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "补偿添加成功");
-            response.put("data", compensation);
-            sendSuccessResponse(exchange, response);
-        } catch (Exception e) {
-            sendErrorResponse(exchange, StatusCodes.INTERNAL_SERVER_ERROR, "添加补偿失败：" + e.getMessage());
-        }
+                    if (compensation == null || compensation.getName() == null || compensation.getDescription() == null) {
+                        sendErrorResponse(ex, StatusCodes.BAD_REQUEST, "补偿名称/说明不能为空");
+                        return;
+                    }
+
+                    plugin.getDataManager().saveCompensation(compensation);
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("success", true);
+                    response.put("message", "补偿添加成功");
+                    response.put("data", compensation);
+                    sendSuccessResponse(ex, response);
+                } catch (Exception e) {
+                    plugin.getLogger().severe("❌ 添加补偿失败：" + e.getMessage());
+                    sendErrorResponse(ex, StatusCodes.INTERNAL_SERVER_ERROR, "添加补偿失败：" + e.getMessage());
+                }
+            });
+        }, (ex, exception) -> {
+            ex.dispatch(() -> {
+                plugin.getLogger().warning("⚠️ 接收补偿请求体失败：" + exception.getMessage());
+                sendErrorResponse(ex, StatusCodes.BAD_REQUEST, "无法读取请求体");
+            });
+        });
     }
 
     /**
@@ -114,6 +136,10 @@ public class CompensationHandler implements HttpHandler {
             return;
         }
         String id = param.getFirst();
+        if (id == null || id.trim().isEmpty()) {
+            sendErrorResponse(exchange, StatusCodes.BAD_REQUEST, "补偿ID不能为空");
+            return;
+        }
 
         boolean deleted = plugin.getDataManager().deleteCompensation(id);
         if (deleted) {
@@ -131,10 +157,10 @@ public class CompensationHandler implements HttpHandler {
     }
 
     private void sendErrorResponse(HttpServerExchange exchange, int statusCode, String message) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", false);
-        response.put("message", message);
-        
+        Map<String, Object> response = Map.of(
+                "success", false,
+                "message", message
+        );
         exchange.setStatusCode(statusCode);
         exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json;charset=UTF-8");
         exchange.getResponseSender().send(GsonUtils.getGson().toJson(response));

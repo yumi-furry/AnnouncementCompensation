@@ -10,8 +10,10 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
@@ -28,9 +30,9 @@ import java.util.List;
 public class PlayerListener implements Listener {
     // 插件实例（关联数据管理器）
     private final AnnouncementCompensationPlugin plugin;
-    // 补偿凭证物品标识（钻石剑，自定义名称）
+    // 补偿凭证物品标识（特殊纸张，自定义名称）
     private static final String COMPENSATION_ITEM_NAME = ColorUtils.translate("&6&l补偿凭证");
-    private static final Material COMPENSATION_ITEM_MATERIAL = Material.DIAMOND_SWORD;
+    private static final Material COMPENSATION_ITEM_MATERIAL = Material.PAPER;
 
     public PlayerListener(AnnouncementCompensationPlugin plugin) {
         this.plugin = plugin;
@@ -38,7 +40,7 @@ public class PlayerListener implements Listener {
 
     /**
      * 监听玩家登录事件（PlayerJoinEvent）
-     * 处理：白名单校验、未读公告推送、未领取补偿凭证发放
+     * 处理：白名单校验、登录提示、未读公告推送、未领取补偿凭证发放
      */
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent e) {
@@ -56,18 +58,42 @@ public class PlayerListener implements Listener {
             }
         }
 
-        // 2. 推送未读公告
-        pushUnreadAnnouncements(player, playerUUID);
+        // 2. 提示玩家登录（如果尚未绑定账户）
+        boolean hasBoundAccount = plugin.getDataManager().getUsers().stream()
+                .anyMatch(user -> user.getGameUUID() != null && user.getGameUUID().equals(playerUUID));
 
-        // 3. 发放未领取补偿的凭证物品
-        giveUnclaimedCompensationItems(player, playerUUID);
+        if (!hasBoundAccount) {
+            // 对于内网渗透场景，提供本地访问地址和配置域名两种方式
+            int playerPort = plugin.getConfig().getInt("web.player_port", 8081);
+            String localUrl = "https://localhost:" + playerPort;
+            
+            // 获取配置的域名（如果有的话）
+            String configDomain = plugin.getConfig().getString("web.domain", "");
+            String registerUrl = localUrl;
+            
+            // 如果配置了域名且不是localhost，则同时提供域名访问方式
+            if (!configDomain.isEmpty() && !"localhost".equalsIgnoreCase(configDomain)) {
+                String domainUrl = "https://" + configDomain + ":" + playerPort;
+                registerUrl = domainUrl + " 或 " + localUrl;
+            }
+            
+            player.sendMessage(ColorUtils.toComponent("&a请使用 /login <账户名称> <账户密码> 登录你的账户！"));
+            player.sendMessage(ColorUtils.toComponent("&a如果还没有账户，请先在面板注册：" + registerUrl));
+        } else {
+            // 已绑定账户，直接登录
+            player.sendMessage(ColorUtils.toComponent("&a你已绑定账户，欢迎回来！"));
+            // 3. 推送未读公告
+            pushUnreadAnnouncements(player, playerUUID);
+            // 4. 发放未领取补偿的凭证物品
+            giveUnclaimedCompensationItems(player, playerUUID);
+        }
 
-        plugin.getLogger().info("玩家 " + playerName + " 登录成功，已推送未读公告+未领取补偿凭证");
+        plugin.getLogger().info("玩家 " + playerName + " 登录成功");
     }
 
     /**
      * 监听玩家右键事件（PlayerInteractEvent）
-     * 处理：右键补偿凭证领取对应补偿
+     * 处理：右键补偿凭证查看补偿原因并领取对应补偿
      */
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent e) {
@@ -79,7 +105,7 @@ public class PlayerListener implements Listener {
             return;
         }
 
-        // 取消默认右键行为（避免钻石剑攻击/交互）
+        // 取消默认右键行为（避免纸张的默认交互）
         e.setCancelled(true);
 
         String playerUUID = player.getUniqueId().toString();
@@ -95,29 +121,100 @@ public class PlayerListener implements Listener {
             return;
         }
 
-        // 发放补偿物品（默认10个钻石，可自定义）
+        // 先显示所有未领取的补偿原因
+        player.sendMessage(ColorUtils.toComponent("&6&l【未领取补偿列表】"));
         for (Compensation comp : unclaimedCompensations) {
-            // 1. 发放物品（示例：钻石*10，可根据comp.getDescription()解析自定义物品）
-            ItemStack reward = new ItemStack(Material.DIAMOND, 10);
-            player.getInventory().addItem(reward);
+            player.sendMessage(ColorUtils.toComponent("&a" + comp.getName() + "：" + comp.getDescription()));
+        }
+
+        // 发放补偿物品
+        for (Compensation comp : unclaimedCompensations) {
+            // 1. 发放定义的补偿物品
+            for (Compensation.CompensationItem compItem : comp.getItems()) {
+                try {
+                    Material material = Material.valueOf(compItem.getMaterial());
+                    ItemStack reward = new ItemStack(material, compItem.getAmount());
+                    
+                    // 设置自定义名称和描述
+                    ItemMeta meta = reward.getItemMeta();
+                    if (meta != null) {
+                        if (compItem.getCustomName() != null) {
+                            meta.displayName(ColorUtils.toComponent(compItem.getCustomName()));
+                        }
+                        if (compItem.getLore() != null && !compItem.getLore().isEmpty()) {
+                            List<Component> lore = new ArrayList<>();
+                            for (String line : compItem.getLore()) {
+                                lore.add(ColorUtils.toComponent(line));
+                            }
+                            meta.lore(lore);
+                        }
+                        reward.setItemMeta(meta);
+                    }
+                    
+                    // 发放到玩家背包
+                    player.getInventory().addItem(reward);
+                } catch (Exception ex) {
+                    plugin.getLogger().warning("发放补偿物品失败：" + ex.getMessage());
+                    player.sendMessage(ColorUtils.toComponent("&c发放补偿物品失败：" + compItem.getMaterial()));
+                }
+            }
 
             // 2. 标记补偿已领取
             comp.markClaimed(playerUUID);
             plugin.getDataManager().saveCompensation(comp);
 
             // 3. 记录领取日志
-            ClaimLog log = new ClaimLog(playerName, playerUUID, comp.getId());
+            ClaimLog log = new ClaimLog(playerName, playerUUID, comp.getIdString());
             plugin.getDataManager().addClaimLog(log);
-
-            // 4. 发送领取成功提示
-            player.sendMessage(ColorUtils.toComponent("&a你已领取补偿：" + comp.getName() + " - " + comp.getDescription()));
         }
 
         // 移除手中的补偿凭证
         item.setAmount(item.getAmount() - 1);
         player.getInventory().setItemInMainHand(item);
 
+        player.sendMessage(ColorUtils.toComponent("&a所有补偿已领取完成！"));
         plugin.getLogger().info("玩家 " + playerName + " 领取了 " + unclaimedCompensations.size() + " 个补偿");
+    }
+    
+    /**
+     * 监听玩家移动事件（PlayerMoveEvent）
+     * 限制未登录玩家移动
+     */
+    @EventHandler
+    public void onPlayerMove(PlayerMoveEvent e) {
+        Player player = e.getPlayer();
+        String playerUUID = player.getUniqueId().toString();
+        
+        // 检查玩家是否已绑定账户
+        boolean hasBoundAccount = plugin.getDataManager().getUsers().stream()
+                .anyMatch(user -> user.getGameUUID() != null && user.getGameUUID().equals(playerUUID));
+        
+        if (!hasBoundAccount) {
+            e.setCancelled(true);
+            player.sendMessage(ColorUtils.toComponent("&c请先使用 /login <账户名称> <账户密码> 登录你的账户！"));
+        }
+    }
+    
+    /**
+     * 监听玩家打开背包事件（InventoryOpenEvent）
+     * 限制未登录玩家打开背包
+     */
+    @EventHandler
+    public void onInventoryOpen(InventoryOpenEvent e) {
+        if (!(e.getPlayer() instanceof Player player)) {
+            return;
+        }
+        
+        String playerUUID = player.getUniqueId().toString();
+        
+        // 检查玩家是否已绑定账户
+        boolean hasBoundAccount = plugin.getDataManager().getUsers().stream()
+                .anyMatch(user -> user.getGameUUID() != null && user.getGameUUID().equals(playerUUID));
+        
+        if (!hasBoundAccount) {
+            e.setCancelled(true);
+            player.sendMessage(ColorUtils.toComponent("&c请先使用 /login <账户名称> <账户密码> 登录你的账户！"));
+        }
     }
 
     // ====================== 私有辅助方法 ======================
@@ -127,6 +224,7 @@ public class PlayerListener implements Listener {
     private void pushUnreadAnnouncements(Player player, String playerUUID) {
         List<Announcement> unreadAnnouncements = plugin.getDataManager().getAllAnnouncements().stream()
                 .filter(ann -> ann.isSent() && !ann.getReadStatus().getOrDefault(playerUUID, false))
+                .sorted((a1, a2) -> Integer.compare(a2.getPriority(), a1.getPriority())) // 按优先级降序排序
                 .toList();
 
         if (unreadAnnouncements.isEmpty()) {

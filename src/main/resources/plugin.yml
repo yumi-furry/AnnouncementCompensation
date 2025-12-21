@@ -1,5 +1,6 @@
 # 插件基础信息（必填）
 name: AnnouncementCompensation
+api: "1.19"
 version: 0.0.1
 main: com.server.AnnouncementCompensationPlugin
 api-version: 1.19  # 适配Paper 1.19.2，必须指定1.19（Bukkit/Paper 1.19+ 要求）
@@ -34,6 +35,12 @@ permissions:
   ac.game.announcement:
     description: "游戏内管理公告权限"
     default: op
+  ac.game.login:
+    description: "游戏内登录账户权限"
+    default: true
+  ac.game.tpa:
+    description: "游戏内传送请求权限"
+    default: true
 
 commands:
   compensation:
@@ -47,4 +54,24 @@ commands:
     usage: "/<command> [list/send <公告ID>]"
     aliases: [ "ann", "公告" ]
     permission: "ac.game.announcement"
+    permission-message: "&c你没有使用该命令的权限！"
+  login:
+    description: "登录账户"
+    usage: "/<command> <账户名称> <账户密码>"
+    permission: "ac.game.login"
+    permission-message: "&c你没有使用该命令的权限！"
+  tpa:
+    description: "请求传送到另一个玩家处"
+    usage: "/<command> <玩家A> <玩家B>"
+    permission: "ac.game.tpa"
+    permission-message: "&c你没有使用该命令的权限！"
+  tpaccept:
+    description: "接受传送请求"
+    usage: "/<command> <玩家A>"
+    permission: "ac.game.tpa"
+    permission-message: "&c你没有使用该命令的权限！"
+  tpdeny:
+    description: "拒绝传送请求"
+    usage: "/<command> <玩家A>"
+    permission: "ac.game.tpa"
     permission-message: "&c你没有使用该命令的权限！"

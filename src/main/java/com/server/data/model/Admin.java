@@ -9,6 +9,8 @@ import java.util.List;
  * 适配BCrypt密码加密、Web权限校验
  */
 public class Admin {
+    // 数据库ID
+    private int id;
     // 管理员用户名（唯一）
     private String username;
     // BCrypt加密后的密码哈希（不存储明文密码）
@@ -16,7 +18,7 @@ public class Admin {
     // 权限列表（如ac.web.announcement、ac.web.*）
     private List<String> permissions = new ArrayList<>();
     // 登录密码（仅用于登录请求接收，不持久化）
-    private transient String password;
+    private String password;
 
     // 无参构造（Gson序列化/反序列化必需）
     public Admin() {}
@@ -29,6 +31,14 @@ public class Admin {
     }
 
     // ====================== Getter/Setter ======================
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
     public String getUsername() {
         return username;
     }

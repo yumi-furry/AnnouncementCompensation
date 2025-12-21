@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>玩家面板 - 服务器公告&补偿系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        success: '#00B42A', 
+                        warning: '#FF7D00',
+                        danger: '#F53F3F',
+                        dark: '#1D2129',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- 登录页面 -->
+    <div id="login-page" class="flex items-center justify-center min-h-screen">
+        <div class="w-full max-w-md bg-white rounded-lg shadow-lg p-6 md:p-8">
+            <div class="text-center mb-6">
+                <i class="fa fa-user text-primary text-4xl mb-2"></i>
+                <h1 class="text-2xl font-bold text-dark">玩家登录</h1>
+                <p class="text-gray-500">请选择登录方式</p>
+            </div>
+            
+            <!-- 登录方式选择 -->
+            <div class="space-y-4">
+                <!-- 邮箱注册登录 -->
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <h3 class="font-medium text-gray-700 mb-3">
+                        <i class="fa fa-envelope text-primary mr-2"></i>邮箱注册/登录
+                    </h3>
+                    <form id="email-login-form" class="space-y-3">
+                        <input type="email" id="email" placeholder="邮箱地址" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none" required>
+                        <input type="password" id="password" placeholder="密码" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none" required>
+                        <div class="flex gap-2">
+                            <button type="submit" class="flex-1 bg-primary text-white py-2 px-4 rounded-lg hover:bg-primary/90 transition">
+                                登录
+                            </button>
+                            <button type="button" onclick="showEmailRegister()" class="flex-1 bg-gray-500 text-white py-2 px-4 rounded-lg hover:bg-gray-600 transition">
+                                注册
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- QQ登录 -->
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <h3 class="font-medium text-gray-700 mb-3">
+                        <i class="fab fa-qq text-primary mr-2"></i>QQ登录
+                    </h3>
+                    <button onclick="qqLogin()" class="w-full bg-[#12B7F5] text-white py-2 px-4 rounded-lg hover:bg-[#0EA5E9] transition">
+                        <i class="fab fa-qq mr-2"></i>使用QQ账号登录
+                    </button>
+                </div>
+
+                <!-- 游客模式 -->
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <h3 class="font-medium text-gray-700 mb-3">
+                        <i class="fa fa-eye text-primary mr-2"></i>游客模式
+                    </h3>
+                    <button onclick="guestLogin()" class="w-full bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition">
+                        <i class="fa fa-user-secret mr-2"></i>以游客身份浏览
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 注册模态框 -->
+    <div id="register-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">邮箱注册</h3>
+                <button onclick="closeRegisterModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+            <form id="register-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">用户名</label>
+                    <input type="text" id="register-username" required 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">邮箱地址</label>
+                    <input type="email" id="register-email" required 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">密码</label>
+                    <input type="password" id="register-password" required 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">确认密码</label>
+                    <input type="password" id="register-confirm" required 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none">
+                </div>
+                <div class="flex gap-3">
+                    <button type="submit" class="flex-1 bg-primary text-white py-2 px-4 rounded-lg hover:bg-primary/90 transition">
+                        注册
+                    </button>
+                    <button type="button" onclick="closeRegisterModal()" class="flex-1 bg-gray-500 text-white py-2 px-4 rounded-lg hover:bg-gray-600 transition">
+                        取消
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 绑定角色弹窗 -->
+    <div id="bind-role-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">绑定游戏角色</h3>
+                <button onclick="closeBindRoleModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+            <div class="text-gray-600 mb-4">
+                <p>请在游戏中输入指令 <code class="bg-gray-100 px-2 py-1 rounded">/vtc</code> 获取您的角色绝对ID</p>
+                <p class="mt-2">复制ID后粘贴到下方输入框完成绑定</p>
+            </div>
+            <form id="bind-role-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">角色绝对ID</label>
+                    <input type="text" id="absolute-id" placeholder="请输入角色绝对ID" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none" required>
+                </div>
+                <div class="flex gap-3">
+                    <button type="submit" class="flex-1 bg-primary text-white py-2 px-4 rounded-lg hover:bg-primary/90 transition">
+                        绑定
+                    </button>
+                    <button type="button" onclick="closeBindRoleModal()" class="flex-1 bg-gray-500 text-white py-2 px-4 rounded-lg hover:bg-gray-600 transition">
+                        稍后绑定
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 主界面 -->
+    <div id="main-page" class="hidden">
+        <!-- 顶部导航栏 -->
+        <nav class="bg-white shadow-sm border-b border-gray-200">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center h-16">
+                    <div class="flex items-center">
+                        <i class="fa fa-server text-primary text-2xl mr-3"></i>
+                        <h1 class="text-xl font-semibold text-gray-900">玩家中心</h1>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <span id="user-info" class="text-sm text-gray-600"></span>
+                        <button id="logout-btn" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
+                            <i class="fa fa-sign-out-alt mr-2"></i>退出
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- 主要内容区 -->
+        <main class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- 公告查看 -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-semibold text-gray-900">
+                            <i class="fa fa-bullhorn text-primary mr-2"></i>服务器公告
+                        </h2>
+                        <button onclick="loadAnnouncements()" class="text-primary hover:text-primary/80">
+                            <i class="fa fa-refresh"></i>
+                        </button>
+                    </div>
+                    <div id="announcements-list" class="space-y-3 max-h-96 overflow-y-auto">
+                        <!-- 公告列表将在这里动态加载 -->
+                    </div>
+                </div>
+
+                <!-- 补偿领取 -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-semibold text-gray-900">
+                            <i class="fa fa-gift text-primary mr-2"></i>补偿领取
+                        </h2>
+                        <button onclick="loadCompensations()" class="text-primary hover:text-primary/80">
+                            <i class="fa fa-refresh"></i>
+                        </button>
+                    </div>
+                    <div id="compensations-list" class="space-y-3 max-h-96 overflow-y-auto">
+                        <!-- 补偿列表将在这里动态加载 -->
+                    </div>
+                </div>
+
+                <!-- 在线用户 -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-semibold text-gray-900">
+                            <i class="fa fa-users text-primary mr-2"></i>在线用户
+                        </h2>
+                        <button onclick="loadOnlineUsers()" class="text-primary hover:text-primary/80">
+                            <i class="fa fa-refresh"></i>
+                        </button>
+                    </div>
+                    <div id="online-users" class="space-y-2 max-h-64 overflow-y-auto">
+                        <!-- 在线用户列表将在这里动态加载 -->
+                    </div>
+                </div>
+
+                <!-- 地图查看 -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-semibold text-gray-900">
+                            <i class="fa fa-map text-primary mr-2"></i>地图查看（方圆70格）
+                        </h2>
+                        <button onclick="loadMap()" class="text-primary hover:text-primary/80">
+                            <i class="fa fa-refresh"></i>
+                        </button>
+                    </div>
+                    <div id="map-container" class="bg-gray-100 rounded-lg p-4">
+                        <canvas id="game-map" class="border border-gray-300 rounded w-full" width="600" height="600"></canvas>
+                        <div class="mt-2 text-sm text-gray-500 text-center">
+                            <p>拖动鼠标可旋转视角 | 点击刷新按钮更新地图</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        let USER_TOKEN = localStorage.getItem('userToken') || '';
+        let USER_INFO = JSON.parse(localStorage.getItem('userInfo') || '{}');
+
+        // 检查登录状态
+        function checkLoginStatus() {
+            if (USER_TOKEN) {
+                document.getElementById('login-page').classList.add('hidden');
+                document.getElementById('main-page').classList.remove('hidden');
+                document.getElementById('user-info').textContent = USER_INFO.username || USER_INFO.email || '用户';
+                loadInitialData();
+            }
+        }
+
+        // 邮箱登录
+        document.getElementById('email-login-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/user/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    USER_TOKEN = data.token;
+                    USER_INFO = data.user;
+                    localStorage.setItem('userToken', USER_TOKEN);
+                    localStorage.setItem('userInfo', JSON.stringify(USER_INFO));
+                    checkLoginStatus();
+                } else {
+                    alert('登录失败：' + data.message);
+                }
+            } catch (error) {
+                alert('登录失败，请检查网络连接');
+            }
+        });
+
+        // QQ登录
+        function qqLogin() {
+            window.location.href = `${API_BASE}/user/qq-login`;
+        }
+
+        // 游客登录
+        function guestLogin() {
+            USER_TOKEN = 'guest';
+            USER_INFO = { username: '游客', type: 'guest' };
+            localStorage.setItem('userToken', USER_TOKEN);
+            localStorage.setItem('userInfo', JSON.stringify(USER_INFO));
+            checkLoginStatus();
+        }
+
+        // 显示注册模态框
+        function showEmailRegister() {
+            document.getElementById('register-modal').classList.remove('hidden');
+        }
+
+        // 关闭注册模态框
+        function closeRegisterModal() {
+            document.getElementById('register-modal').classList.add('hidden');
+            document.getElementById('register-form').reset();
+        }
+
+        // 注册表单提交
+        document.getElementById('register-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const username = document.getElementById('register-username').value;
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            const confirm = document.getElementById('register-confirm').value;
+
+            if (password !== confirm) {
+                alert('密码确认不匹配');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/user/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, email, password })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('注册成功！现在请绑定您的游戏角色');
+                    closeRegisterModal();
+                    showBindRoleModal();
+                } else {
+                    alert('注册失败：' + data.message);
+                }
+            } catch (error) {
+                alert('注册失败，请检查网络连接');
+            }
+        });
+
+        // 显示绑定角色弹窗
+        function showBindRoleModal() {
+            document.getElementById('bind-role-modal').classList.remove('hidden');
+        }
+
+        // 关闭绑定角色弹窗
+        function closeBindRoleModal() {
+            document.getElementById('bind-role-modal').classList.add('hidden');
+            document.getElementById('bind-role-form').reset();
+        }
+
+        // 绑定角色表单提交
+        document.getElementById('bind-role-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const absoluteId = document.getElementById('absolute-id').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/user/bind-role`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ absoluteId })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('角色绑定成功！');
+                    closeBindRoleModal();
+                    // 自动登录
+                    loginAfterBind();
+                } else {
+                    alert('绑定失败：' + data.message);
+                }
+            } catch (error) {
+                alert('绑定失败，请检查网络连接');
+            }
+        });
+
+        // 绑定后自动登录
+        async function loginAfterBind() {
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/user/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    USER_TOKEN = data.token;
+                    USER_INFO = data.user;
+                    localStorage.setItem('userToken', USER_TOKEN);
+                    localStorage.setItem('userInfo', JSON.stringify(USER_INFO));
+                    checkLoginStatus();
+                }
+            } catch (error) {
+                console.error('自动登录失败:', error);
+                // 自动登录失败不影响用户体验，用户可以手动登录
+            }
+        }
+
+        // 退出登录
+        document.getElementById('logout-btn').addEventListener('click', function() {
+            localStorage.removeItem('userToken');
+            localStorage.removeItem('userInfo');
+            location.reload();
+        });
+
+        // 加载初始数据
+        function loadInitialData() {
+            loadAnnouncements();
+            loadCompensations();
+            loadOnlineUsers();
+            loadMap();
+        }
+
+        // 加载公告
+        async function loadAnnouncements() {
+            try {
+                const response = await fetch(`${API_BASE}/announcement/list`);
+                const data = await response.json();
+                const container = document.getElementById('announcements-list');
+                
+                if (data.success && data.announcements) {
+                    container.innerHTML = data.announcements.map(announcement => `
+                        <div class="border border-gray-200 rounded-lg p-3">
+                            <h4 class="font-medium text-gray-900">${announcement.title}</h4>
+                            <p class="text-sm text-gray-600 mt-1">${announcement.content}</p>
+                            <p class="text-xs text-gray-400 mt-2">${new Date(announcement.createdAt).toLocaleString()}</p>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('加载公告失败:', error);
+            }
+        }
+
+        // 加载补偿
+        async function loadCompensations() {
+            try {
+                const response = await fetch(`${API_BASE}/compensation/list`);
+                const data = await response.json();
+                const container = document.getElementById('compensations-list');
+                
+                if (data.success && data.compensations) {
+                    container.innerHTML = data.compensations.map(compensation => `
+                        <div class="border border-gray-200 rounded-lg p-3">
+                            <h4 class="font-medium text-gray-900">${compensation.title}</h4>
+                            <p class="text-sm text-gray-600 mt-1">${compensation.description}</p>
+                            <button onclick="claimCompensation('${compensation.id}')" 
+                                    class="mt-2 bg-primary text-white px-3 py-1 rounded text-sm hover:bg-primary/90">
+                                领取补偿
+                            </button>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('加载补偿失败:', error);
+            }
+        }
+
+        // 领取补偿
+        async function claimCompensation(compensationId) {
+            try {
+                const response = await fetch(`${API_BASE}/compensation/claim`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${USER_TOKEN}`
+                    },
+                    body: JSON.stringify({ compensationId })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('补偿领取成功！');
+                    loadCompensations();
+                } else {
+                    alert('领取失败：' + data.message);
+                }
+            } catch (error) {
+                alert('领取失败，请检查网络连接');
+            }
+        }
+
+        // 加载地图数据
+        async function loadMap() {
+            try {
+                // 获取当前在线玩家列表
+                const playersResponse = await fetch(`${API_BASE}/user/online`);
+                const playersData = await playersResponse.json();
+                
+                if (!playersData.success || !playersData.users || playersData.users.length === 0) {
+                    alert('没有在线玩家');
+                    return;
+                }
+                
+                // 假设当前用户对应第一个在线玩家（实际应该根据绑定关系确定）
+                const currentPlayer = playersData.users[0];
+                
+                // 获取地图数据
+                const mapResponse = await fetch(`${API_BASE}/map/getPlayerMap?token=${USER_TOKEN}&playerName=${encodeURIComponent(currentPlayer.username)}&radius=70`);
+                const mapData = await mapResponse.json();
+                
+                if (mapData.success && mapData.mapData) {
+                    renderMap(mapData.mapData);
+                } else {
+                    alert('获取地图数据失败：' + mapData.message);
+                }
+            } catch (error) {
+                console.error('加载地图失败:', error);
+                alert('加载地图失败，请检查网络连接');
+            }
+        }
+        
+        // 渲染地图到Canvas
+        function renderMap(mapData) {
+            const canvas = document.getElementById('game-map');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            // 清空画布
+            ctx.clearRect(0, 0, width, height);
+            
+            const radius = mapData.radius;
+            const blocks = mapData.blocks;
+            const playerPos = mapData.playerPosition;
+            
+            // 计算缩放比例
+            const scale = Math.min(width / (radius * 2), height / (radius * 2));
+            
+            // 方块颜色映射
+            const blockColors = {
+                'GRASS_BLOCK': '#55AA55',
+                'DIRT': '#8B4513',
+                'STONE': '#888888',
+                'WATER': '#5555FF',
+                'LAVA': '#FF5555',
+                'OAK_LOG': '#8B4513',
+                'OAK_LEAVES': '#00FF00',
+                'BEDROCK': '#333333',
+                'SAND': '#FFFF55',
+                'COBBLESTONE': '#777777',
+                'WOODEN_PLANKS': '#A0522D',
+                'IRON_ORE': '#AAAAAA',
+                'GOLD_ORE': '#FFD700',
+                'DIAMOND_ORE': '#00FFFF',
+                'COAL_ORE': '#222222',
+                'REDSTONE_ORE': '#FF0000',
+                'EMERALD_ORE': '#00FF00',
+                'NETHERRACK': '#8B0000',
+                'END_STONE': '#F0E68C',
+                'AIR': '#00000000',
+                'SNOW': '#FFFFFF',
+                'ICE': '#B0E0E6',
+                'GLASS': '#B0C4DE',
+                'CACTUS': '#00AA00',
+                'SUGAR_CANE': '#228B22',
+                'PUMPKIN': '#FF8C00',
+                'MELON': '#7CFC00',
+                'TORCH': '#FFD700',
+                'FIRE': '#FF6347'
+            };
+            
+            // 绘制方块
+            blocks.forEach(block => {
+                const x = block.x + radius;
+                const z = block.z + radius;
+                
+                // 将坐标转换为Canvas坐标
+                const canvasX = x * scale;
+                const canvasY = (radius * 2 - z) * scale;
+                
+                // 获取方块颜色
+                const color = blockColors[block.type] || '#FF00FF'; // 默认使用洋红色表示未知方块
+                
+                // 绘制方块
+                ctx.fillStyle = color;
+                ctx.fillRect(canvasX, canvasY, scale, scale);
+                
+                // 添加方块边框
+                ctx.strokeStyle = '#00000020';
+                ctx.strokeRect(canvasX, canvasY, scale, scale);
+            });
+            
+            // 绘制玩家位置（红色圆点）
+            const playerCanvasX = radius * scale;
+            const playerCanvasY = radius * scale;
+            
+            ctx.fillStyle = '#FF0000';
+            ctx.beginPath();
+            ctx.arc(playerCanvasX, playerCanvasY, scale * 2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 绘制玩家朝向
+            const directionLength = scale * 5;
+            const yaw = playerPos.yaw * Math.PI / 180; // 转换为弧度
+            
+            const directionX = Math.sin(yaw) * directionLength;
+            const directionY = Math.cos(yaw) * directionLength;
+            
+            ctx.strokeStyle = '#FFFF00';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(playerCanvasX, playerCanvasY);
+            ctx.lineTo(playerCanvasX + directionX, playerCanvasY - directionY);
+            ctx.stroke();
+            
+            // 添加图例
+            ctx.fillStyle = '#000000';
+            ctx.font = '12px Arial';
+            ctx.fillText('当前玩家', width - 80, 20);
+            ctx.fillText('半径: ' + radius + '格', width - 80, 40);
+            ctx.fillText('世界: ' + mapData.world, width - 80, 60);
+        }
+        
+        // 加载在线用户
+        async function loadOnlineUsers() {
+            try {
+                const response = await fetch(`${API_BASE}/user/online`);
+                const data = await response.json();
+                const container = document.getElementById('online-users');
+                
+                if (data.success && data.users) {
+                    container.innerHTML = data.users.map(user => `
+                        <div class="flex items-center justify-between py-2 px-3 bg-gray-50 rounded">
+                            <span class="text-sm font-medium">${user.username}</span>
+                            <span class="text-xs text-gray-500">${user.server || '服务器'}</span>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('加载在线用户失败:', error);
+            }
+        }
+
+        // 加载地图
+        async function loadMap() {
+            const container = document.getElementById('map-container');
+            
+            // 显示加载状态
+            container.innerHTML = `
+                <div class="text-center">
+                    <i class="fa fa-spinner fa-spin text-primary text-4xl mb-2"></i>
+                    <p class="text-gray-500">加载地图数据...</p>
+                </div>
+            `;
+            
+            try {
+                // 获取当前登录用户信息
+                if (!USER_INFO || !USER_INFO.username) {
+                    container.innerHTML = `
+                        <div class="text-center">
+                            <i class="fa fa-exclamation-circle text-warning text-4xl mb-2"></i>
+                            <p class="text-gray-500">请先登录</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // 调用后端API获取地图数据
+                const response = await fetch(`${API_BASE}/map/getPlayerMap?token=${USER_TOKEN}&playerName=${USER_INFO.username}&radius=70`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    // 渲染地图
+                    renderMap(container, data.mapData);
+                } else {
+                    container.innerHTML = `
+                        <div class="text-center">
+                            <i class="fa fa-exclamation-circle text-danger text-4xl mb-2"></i>
+                            <p class="text-gray-500">${data.message}</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('加载地图失败:', error);
+                container.innerHTML = `
+                    <div class="text-center">
+                        <i class="fa fa-exclamation-circle text-danger text-4xl mb-2"></i>
+                        <p class="text-gray-500">加载地图失败</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // 渲染地图
+        function renderMap(container, mapData) {
+            // 创建Canvas元素
+            const canvas = document.createElement('canvas');
+            const size = 500; // Canvas大小
+            const radius = mapData.radius;
+            const scale = size / (radius * 2);
+            
+            canvas.width = size;
+            canvas.height = size;
+            canvas.className = 'border border-gray-300 rounded-lg';
+            
+            const ctx = canvas.getContext('2d');
+            
+            // 清空画布
+            ctx.clearRect(0, 0, size, size);
+            
+            // 设置背景
+            ctx.fillStyle = '#87CEEB'; // 天空蓝色
+            ctx.fillRect(0, 0, size, size);
+            
+            // 绘制方块
+            mapData.blocks.forEach(block => {
+                const x = block.x * scale + size / 2;
+                const z = block.z * scale + size / 2;
+                
+                // 根据方块类型设置颜色
+                let color = getBlockColor(block.type);
+                
+                // 绘制方块
+                ctx.fillStyle = color;
+                ctx.fillRect(x - scale/2, z - scale/2, scale, scale);
+                
+                // 添加边框
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+                ctx.strokeRect(x - scale/2, z - scale/2, scale, scale);
+            });
+            
+            // 绘制玩家位置
+            const playerX = size / 2;
+            const playerZ = size / 2;
+            
+            // 绘制玩家
+            ctx.fillStyle = '#FF0000'; // 红色
+            ctx.beginPath();
+            ctx.arc(playerX, playerZ, scale, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 绘制玩家朝向
+            const yaw = mapData.playerPosition.yaw * Math.PI / 180;
+            const directionX = Math.sin(yaw) * scale * 2;
+            const directionZ = Math.cos(yaw) * scale * 2;
+            
+            ctx.strokeStyle = '#FFFFFF'; // 白色
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(playerX, playerZ);
+            ctx.lineTo(playerX + directionX, playerZ + directionZ);
+            ctx.stroke();
+            
+            // 清空容器并添加Canvas
+            container.innerHTML = '';
+            container.appendChild(canvas);
+            
+            // 添加地图信息
+            const infoDiv = document.createElement('div');
+            infoDiv.className = 'mt-2 text-sm text-gray-500 text-center';
+            infoDiv.innerHTML = `
+                <p>世界: ${mapData.world} | 半径: ${radius}格 | 方块数: ${mapData.blocks.length}</p>
+            `;
+            container.appendChild(infoDiv);
+        }
+        
+        // 根据方块类型获取颜色
+        function getBlockColor(blockType) {
+            const colorMap = {
+                // 陆地方块
+                'GRASS_BLOCK': '#228B22',
+                'DIRT': '#8B4513',
+                'STONE': '#808080',
+                'COBBLESTONE': '#A9A9A9',
+                'WOOD': '#8B4513',
+                'OAK_LOG': '#8B4513',
+                'BIRCH_LOG': '#F5DEB3',
+                'SPRUCE_LOG': '#2F4F4F',
+                'JUNGLE_LOG': '#8B4513',
+                'ACACIA_LOG': '#8B4513',
+                'DARK_OAK_LOG': '#2F4F4F',
+                'LEAVES': '#006400',
+                'OAK_LEAVES': '#006400',
+                'BIRCH_LEAVES': '#90EE90',
+                'SPRUCE_LEAVES': '#228B22',
+                'JUNGLE_LEAVES': '#006400',
+                'ACACIA_LEAVES': '#006400',
+                'DARK_OAK_LEAVES': '#228B22',
+                'SAND': '#F4A460',
+                'GRAVEL': '#A9A9A9',
+                'CLAY': '#8B7355',
+                'GRASS_PATH': '#654321',
+                'FARMLAND': '#DEB887',
+                'WHEAT': '#DAA520',
+                'CARROTS': '#FF6347',
+                'POTATOES': '#A52A2A',
+                'NETHERRACK': '#8B0000',
+                'END_STONE': '#F0F8FF',
+                'SNOW': '#FFFFFF',
+                'SNOW_BLOCK': '#FFFFFF',
+                'ICE': '#87CEFA',
+                'PACKED_ICE': '#B0E0E6',
+                'BLUE_ICE': '#E0FFFF',
+                'COAL_ORE': '#2F4F4F',
+                'IRON_ORE': '#778899',
+                'GOLD_ORE': '#DAA520',
+                'DIAMOND_ORE': '#87CEFA',
+                'REDSTONE_ORE': '#FF4500',
+                'LAPIS_ORE': '#4169E1',
+                'EMERALD_ORE': '#2E8B57',
+                'QUARTZ_ORE': '#F5F5F5',
+                'ANCIENT_DEBRIS': '#8B4513',
+                
+                // 液体方块
+                'WATER': '#1E90FF',
+                'LAVA': '#FF4500',
+                
+                // 结构方块
+                'BEDROCK': '#000000',
+                'OBSIDIAN': '#4B0082',
+                'END_PORTAL_FRAME': '#4B0082',
+                'NETHER_PORTAL': '#800080',
+                
+                // 默认颜色
+                'DEFAULT': '#808080'
+            };
+            
+            return colorMap[blockType] || colorMap['DEFAULT'];
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            checkLoginStatus();
+        });
+    </script>
+</body>
+</html>

@@ -1,6 +1,8 @@
 # Web管理面板配置
 web:
-  port: 8080                  # 访问端口
+  admin_port: 8080            # 管理员面板访问端口
+  player_port: 8081           # 玩家面板访问端口
+  domain: "localhost"         # 域名配置（为空时使用localhost）
   login:
     username: admin           # 管理员账号（默认）
     # 若使用明文密码，这里会在第一次启动时自动加密并保存为BCrypt哈希；也可以直接填写BCrypt哈希值
@@ -19,3 +21,55 @@ compensation:
     lore:                     # 道具描述
       - "§7点击领取服务器公告补偿"
       - "§7领取后自动绑定账号"
+
+# SMTP邮件服务器配置
+# 推荐使用Gmail、QQ邮箱、163邮箱等常用邮箱服务
+# Gmail示例（推荐）：
+#   host: "smtp.gmail.com"
+#   port: 587
+#   ssl: false
+#   username: "your_gmail@gmail.com"
+#   password: "your_app_password"
+smtp:
+  enable: true                # 是否启用SMTP邮件发送
+  host: "smtp.gmail.com"      # SMTP服务器地址
+  port: 587                   # SMTP服务器端口
+  protocol: "smtp"            # 邮件协议（smtp或smtps）
+  ssl: false                  # 是否启用SSL（587端口用STARTTLS，465端口用SSL）
+  username: "your_email@gmail.com"    # SMTP用户名（邮箱地址）
+  password: "your_app_password"       # SMTP密码（建议使用应用专用密码）
+  sender: "noreply@gmail.com"         # 发件人邮箱
+
+# QQ API配置
+qqapi:
+  enable: false               # 是否启用QQ登录功能
+  appId: "your_app_id"       # QQ开放平台应用ID
+  appKey: "your_app_key"     # QQ开放平台应用密钥
+  redirectUri: "https://your_domain.com/callback"  # 回调URL
+
+# 数据库配置
+database:
+  # 数据存储方式：json(本地JSON文件) 或 sql(SQL数据库)
+  storage: "json"
+  
+  # SQL数据库配置（当storage: "sql"时启用）
+  sql:
+    type: "mysql"             # 数据库类型：mysql, postgresql, h2
+    host: "localhost"         # 数据库主机
+    port: 3306                # 数据库端口
+    database: "announcement_compensation"  # 数据库名
+    username: "root"          # 数据库用户名
+    password: "password"      # 数据库密码
+    # 连接池配置
+    pool:
+      min_idle: 5             # 最小空闲连接
+      max_idle: 20            # 最大空闲连接
+      max_active: 50          # 最大活跃连接
+      max_wait: 60000         # 最大等待时间(毫秒)
+
+# 服务器图标配置
+server:
+  icon:
+    enable: false             # 是否启用自定义服务器图标
+    path: "server-icon.png"   # 图标文件路径（相对服务器根目录）
+    resolution: 64            # 图标分辨率（64x64或128x128）

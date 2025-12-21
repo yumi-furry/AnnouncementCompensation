@@ -9,6 +9,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
 
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,7 +24,7 @@ public class AnnouncementHandler implements HttpHandler {
 
     public AnnouncementHandler(AnnouncementCompensationPlugin plugin) {
         this.plugin = plugin;
-        // 修复点：删除错误的getHandlerByPath调用，从插件主类获取LoginHandler实例
+        // 从插件主类获取 LoginHandler 实例
         this.loginHandler = plugin.getLoginHandler();
     }
 
@@ -77,37 +78,62 @@ public class AnnouncementHandler implements HttpHandler {
     }
 
     /**
-     * 添加新公告
+     * 添加新公告（改为异步接收请求体并在工作线程处理）
      */
     private void handleAddAnnouncement(HttpServerExchange exchange) {
-        try {
-            String requestBody = new String(exchange.getInputStream().readAllBytes());
-            Announcement announcement = GsonUtils.getGson().fromJson(requestBody, Announcement.class);
-            
-            // 参数校验
-            if (announcement.getName() == null || announcement.getContent() == null) {
-                sendErrorResponse(exchange, StatusCodes.BAD_REQUEST, "公告名称/内容不能为空");
-                return;
-            }
+        exchange.getRequestReceiver().receiveFullBytes((ex, bytes) -> {
+            ex.dispatch(() -> {
+                try {
+                    if (bytes == null || bytes.length == 0) {
+                        sendErrorResponse(ex, StatusCodes.BAD_REQUEST, "请求体为空");
+                        return;
+                    }
+                    // 使用UTF-8编码解析请求体
+                    String message = new String(bytes, StandardCharsets.UTF_8);
+                    Announcement announcement;
+                    try {
+                        announcement = GsonUtils.getGson().fromJson(message, Announcement.class);
+                    } catch (Exception je) {
+                        plugin.getLogger().warning("⚠️ 解析公告请求JSON失败：" + je.getMessage());
+                        sendErrorResponse(ex, StatusCodes.BAD_REQUEST, "请求体格式不正确（非JSON）");
+                        return;
+                    }
 
-            // 保存公告
-            plugin.getDataManager().saveAnnouncement(announcement);
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "公告添加成功");
-            response.put("data", announcement);
-            sendSuccessResponse(exchange, response);
-        } catch (Exception e) {
-            sendErrorResponse(exchange, StatusCodes.INTERNAL_SERVER_ERROR, "添加公告失败：" + e.getMessage());
-        }
+                    if (announcement == null || announcement.getName() == null || announcement.getContent() == null) {
+                        sendErrorResponse(ex, StatusCodes.BAD_REQUEST, "公告名称/内容不能为空");
+                        return;
+                    }
+
+                    plugin.getDataManager().saveAnnouncement(announcement);
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("success", true);
+                    response.put("message", "公告添加成功");
+                    response.put("data", announcement);
+                    sendSuccessResponse(ex, response);
+                } catch (Exception e) {
+                    plugin.getLogger().severe("❌ 添加公告失败：" + e.getMessage());
+                    sendErrorResponse(ex, StatusCodes.INTERNAL_SERVER_ERROR, "添加公告失败：" + e.getMessage());
+                }
+            });
+        }, (ex, exception) -> {
+            ex.dispatch(() -> {
+                plugin.getLogger().warning("⚠️ 接收公告请求体失败：" + exception.getMessage());
+                sendErrorResponse(ex, StatusCodes.BAD_REQUEST, "无法读取请求体");
+            });
+        });
     }
 
     /**
      * 删除公告
      */
     private void handleDeleteAnnouncement(HttpServerExchange exchange) {
-        String id = exchange.getQueryParameters().get("id").getFirst();
-        if (id == null) {
+        var param = exchange.getQueryParameters().get("id");
+        if (param == null || param.isEmpty()) {
+            sendErrorResponse(exchange, StatusCodes.BAD_REQUEST, "公告ID不能为空");
+            return;
+        }
+        String id = param.getFirst();
+        if (id == null || id.trim().isEmpty()) {
             sendErrorResponse(exchange, StatusCodes.BAD_REQUEST, "公告ID不能为空");
             return;
         }
@@ -128,10 +154,10 @@ public class AnnouncementHandler implements HttpHandler {
     }
 
     private void sendErrorResponse(HttpServerExchange exchange, int statusCode, String message) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", false);
-        response.put("message", message);
-        
+        Map<String, Object> response = Map.of(
+                "success", false,
+                "message", message
+        );
         exchange.setStatusCode(statusCode);
         exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json;charset=UTF-8");
         exchange.getResponseSender().send(GsonUtils.getGson().toJson(response));

@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // 补偿管理
     document.getElementById('add-compensation-btn').addEventListener('click', () => openCompensationModal());
     document.getElementById('compensation-form').addEventListener('submit', saveCompensation);
+    document.getElementById('add-compensation-item').addEventListener('click', addCompensationItemToDOM);
     
     // 白名单管理
     document.getElementById('whitelist-switch').addEventListener('change', toggleWhitelist);
@@ -44,6 +45,30 @@ document.addEventListener('DOMContentLoaded', function() {
         loadWhitelistList();
         loadLogList();
     }
+    
+    // 颜色代码按钮事件处理
+    setupColorButtons();
+    
+    // 重写fetch，统一处理401/403
+    const originalFetch = window.fetch;
+    window.fetch = async function(url, options = {}) {
+        const response = await originalFetch(url, options);
+        
+        // 检查是否是未授权/权限不足
+        if (response.status === 401 || response.status === 403) {
+            // 清除本地存储
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('adminInfo');
+            TOKEN = '';
+            ADMIN_INFO = {};
+            
+            // 刷新登录状态
+            checkLoginStatus();
+            showToast('登录失效，请重新登录', 'error');
+        }
+        
+        return response;
+    };
 });
 
 // ====================== 登录相关 ======================
@@ -190,6 +215,7 @@ async function loadAnnouncementList() {
                     tr.innerHTML = `
                         <td class="border border-gray-200 px-4 py-2">${ann.id || '-'}</td>
                         <td class="border border-gray-200 px-4 py-2">${ann.name || '-'}</td>
+                        <td class="border border-gray-200 px-4 py-2">${ann.priority || 0}</td>
                         <td class="border border-gray-200 px-4 py-2">${ann.sendTime || '立即发送'}</td>
                         <td class="border border-gray-200 px-4 py-2">${ann.createTime || '-'}</td>
                         <td class="border border-gray-200 px-4 py-2">
@@ -209,7 +235,7 @@ async function loadAnnouncementList() {
             } else {
                 listEl.innerHTML = `
                     <tr>
-                        <td colspan="6" class="border border-gray-200 px-4 py-8 text-center text-gray-500">
+                        <td colspan="7" class="border border-gray-200 px-4 py-8 text-center text-gray-500">
                             暂无公告数据
                         </td>
                     </tr>
@@ -250,6 +276,7 @@ function openAnnouncementModal(id = '') {
                     document.getElementById('announcement-id').value = ann.id;
                     document.getElementById('announcement-name').value = ann.name || '';
                     document.getElementById('announcement-content').value = ann.content || '';
+                    document.getElementById('announcement-priority').value = ann.priority || 0;
                     // 转换时间格式为datetime-local（YYYY-MM-DDTHH:MM）
                     if (ann.sendTime) {
                         const formattedTime = ann.sendTime.replace(' ', 'T');
@@ -275,6 +302,7 @@ async function saveAnnouncement(e) {
     const id = document.getElementById('announcement-id').value;
     const name = document.getElementById('announcement-name').value.trim();
     const content = document.getElementById('announcement-content').value.trim();
+    const priority = parseInt(document.getElementById('announcement-priority').value) || 0;
     let sendTime = document.getElementById('announcement-send-time').value;
     
     // 转换时间格式（YYYY-MM-DDTHH:MM → YYYY-MM-DD HH:MM）
@@ -285,7 +313,7 @@ async function saveAnnouncement(e) {
     }
 
     try {
-        const data = { name, content, sendTime };
+        const data = { name, content, sendTime, priority };
         if (id) data.id = id;
         
         const response = await fetch(`${API_BASE}/announcement`, {
@@ -412,6 +440,10 @@ function openCompensationModal(id = '') {
     form.reset();
     document.getElementById('compensation-id').value = '';
     
+    // 清空物品列表
+    const itemsContainer = document.getElementById('compensation-items-container');
+    itemsContainer.innerHTML = '';
+    
     if (id) {
         // 编辑模式
         titleEl.textContent = '编辑补偿';
@@ -426,16 +458,178 @@ function openCompensationModal(id = '') {
                     document.getElementById('compensation-id').value = comp.id;
                     document.getElementById('compensation-name').value = comp.name || '';
                     document.getElementById('compensation-desc').value = comp.description || '';
+                    
+                    // 加载物品列表
+                    if (comp.items && comp.items.length > 0) {
+                        comp.items.forEach(item => {
+                            addCompensationItemToDOM(item.material, item.amount, item.customName, item.lore);
+                        });
+                    } else {
+                        // 默认添加一个空物品行
+                        addCompensationItemToDOM();
+                    }
                 }
             }
         });
     } else {
         // 新增模式
         titleEl.textContent = '新增补偿';
+        // 默认添加一个空物品行
+        addCompensationItemToDOM();
     }
     
     // 显示弹窗
     modal.classList.add('show');
+}
+
+/**
+ * 添加补偿物品到DOM
+ */
+function addCompensationItemToDOM(material = '', amount = 1, customName = '', lore = []) {
+    const itemsContainer = document.getElementById('compensation-items-container');
+    const itemIndex = itemsContainer.children.length;
+    
+    const itemDiv = document.createElement('div');
+    itemDiv.className = 'p-3 border border-gray-200 rounded-lg bg-gray-50';
+    itemDiv.innerHTML = `
+        <div class="flex items-center justify-between mb-2">
+            <span class="text-sm font-medium text-gray-700">物品 ${itemIndex + 1}</span>
+            <button type="button" class="text-danger hover:text-danger/80 delete-item" data-index="${itemIndex}">
+                <i class="fa fa-trash"></i>
+            </button>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">物品类型</label>
+                <input type="text" name="item-material" value="${material}" 
+                       class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none" 
+                       placeholder="DIAMOND" required>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">数量</label>
+                <input type="number" name="item-amount" value="${amount}" min="1" max="64" 
+                       class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none" 
+                       required>
+            </div>
+        </div>
+        <div class="mt-3">
+            <label class="block text-xs font-medium text-gray-600 mb-1">自定义名称（可选）</label>
+            <input type="text" name="item-custom-name" value="${customName || ''}" 
+                   class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none" 
+                   placeholder="&b钻石">
+        </div>
+        <div class="mt-3">
+            <label class="block text-xs font-medium text-gray-600 mb-1">描述（可选，每行一条）</label>
+            <textarea name="item-lore" rows="2" 
+                      class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none" 
+                      placeholder="&7高级钻石&#10;&a用于制作高级装备">${lore ? lore.join('\n') : ''}</textarea>
+        </div>
+    `;
+    
+    // 添加删除按钮事件
+    itemDiv.querySelector('.delete-item').addEventListener('click', function() {
+        itemDiv.remove();
+        // 更新所有物品的索引显示
+        updateItemIndices();
+    });
+    
+    itemsContainer.appendChild(itemDiv);
+}
+
+/**
+ * 更新物品索引显示
+ */
+function updateItemIndices() {
+    const itemsContainer = document.getElementById('compensation-items-container');
+    const itemDivs = itemsContainer.querySelectorAll('[class*="p-3 border border-gray-200 rounded-lg bg-gray-50"]');
+    
+    itemDivs.forEach((div, index) => {
+        const titleSpan = div.querySelector('[class*="text-sm font-medium text-gray-700"]');
+        if (titleSpan) {
+            titleSpan.textContent = `物品 ${index + 1}`;
+        }
+        
+        const deleteBtn = div.querySelector('.delete-item');
+        if (deleteBtn) {
+            deleteBtn.dataset.index = index;
+        }
+    });
+}
+
+// ====================== 颜色代码按钮 ======================
+/**
+ * 设置颜色代码按钮事件
+ */
+function setupColorButtons() {
+    // 为公告编辑的颜色按钮添加事件
+    document.addEventListener('click', function(e) {
+        if (e.target && e.target.classList.contains('color-btn')) {
+            const colorCode = e.target.dataset.code;
+            const parentId = e.target.closest('div').id;
+            
+            let textareaId;
+            if (parentId === 'color-buttons-announcement') {
+                textareaId = 'announcement-content';
+            } else if (parentId === 'color-buttons-compensation') {
+                textareaId = 'compensation-desc';
+            }
+            
+            if (textareaId) {
+                const textarea = document.getElementById(textareaId);
+                if (textarea) {
+                    // 插入颜色代码到文本框
+                    insertAtCursor(textarea, colorCode);
+                    // 聚焦文本框
+                    textarea.focus();
+                }
+            }
+        }
+    });
+}
+
+/**
+ * 在文本框光标位置插入文本
+ */
+function insertAtCursor(textarea, text) {
+    const startPos = textarea.selectionStart;
+    const endPos = textarea.selectionEnd;
+    const scrollTop = textarea.scrollTop;
+    
+    // 插入文本
+    const newText = textarea.value.substring(0, startPos) + text + textarea.value.substring(endPos);
+    textarea.value = newText;
+    
+    // 恢复光标位置
+    textarea.selectionStart = textarea.selectionEnd = startPos + text.length;
+    textarea.scrollTop = scrollTop;
+}
+
+/**
+ * 获取补偿物品列表
+ */
+function getCompensationItems() {
+    const itemsContainer = document.getElementById('compensation-items-container');
+    const itemDivs = itemsContainer.querySelectorAll('[class*="p-3 border border-gray-200 rounded-lg bg-gray-50"]');
+    const items = [];
+    
+    itemDivs.forEach(div => {
+        const material = div.querySelector('input[name="item-material"]').value.trim().toUpperCase();
+        const amount = parseInt(div.querySelector('input[name="item-amount"]').value) || 1;
+        const customName = div.querySelector('input[name="item-custom-name"]').value.trim();
+        const loreText = div.querySelector('textarea[name="item-lore"]').value.trim();
+        const lore = loreText ? loreText.split('\n').map(line => line.trim()).filter(line => line) : [];
+        
+        if (material) {
+            items.push({
+                material: material,
+                amount: amount,
+                customName: customName,
+                lore: lore
+            });
+        }
+    });
+    
+    return items;
 }
 
 /**
@@ -446,9 +640,20 @@ async function saveCompensation(e) {
     const id = document.getElementById('compensation-id').value;
     const name = document.getElementById('compensation-name').value.trim();
     const description = document.getElementById('compensation-desc').value.trim();
+    const items = getCompensationItems();
+    
+    // 验证至少有一个物品
+    if (items.length === 0) {
+        showToast('请至少添加一个补偿物品', 'error');
+        return;
+    }
 
     try {
-        const data = { name, description };
+        const data = { 
+            name, 
+            description,
+            items
+        };
         if (id) data.id = id;
         
         const response = await fetch(`${API_BASE}/compensation`, {
@@ -763,29 +968,3 @@ function showToast(text, type = 'success') {
         toast.classList.remove('show');
     }, 3000);
 }
-
-/**
- * 拦截未授权响应
- */
-document.addEventListener('DOMContentLoaded', function() {
-    // 重写fetch，统一处理401/403
-    const originalFetch = window.fetch;
-    window.fetch = async function(url, options = {}) {
-        const response = await originalFetch(url, options);
-        
-        // 检查是否是未授权/权限不足
-        if (response.status === 401 || response.status === 403) {
-            // 清除本地存储
-            localStorage.removeItem('adminToken');
-            localStorage.removeItem('adminInfo');
-            TOKEN = '';
-            ADMIN_INFO = {};
-            
-            // 刷新登录状态
-            checkLoginStatus();
-            showToast('登录失效，请重新登录', 'error');
-        }
-        
-        return response;
-    };
-});

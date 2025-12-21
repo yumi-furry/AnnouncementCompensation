@@ -27,7 +27,7 @@ public class WhitelistHandler implements HttpHandler {
 
     public WhitelistHandler(AnnouncementCompensationPlugin plugin) {
         this.plugin = plugin;
-        // 修复点1：从插件主类获取LoginHandler实例（消除getHandlerByPath错误）
+        // 修复点1：从插件主类获取LoginHandler实例
         this.loginHandler = plugin.getLoginHandler();
     }
 
@@ -75,7 +75,7 @@ public class WhitelistHandler implements HttpHandler {
     private void handleGetWhitelist(HttpServerExchange exchange) {
         List<WhitelistEntry> whitelist = plugin.getDataManager().getAllWhitelistEntries();
         boolean enabled = plugin.getDataManager().isWhitelistEnabled();
-        
+
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
         response.put("enabled", enabled);
@@ -85,55 +85,86 @@ public class WhitelistHandler implements HttpHandler {
 
     /**
      * 处理白名单操作（添加/切换启用状态）
+     * 使用非阻塞接收并在工作线程处理，避免在 IO 线程做阻塞 IO
      */
     private void handleWhitelistAction(HttpServerExchange exchange) {
-        try {
-            String requestBody = new String(exchange.getInputStream().readAllBytes());
-            // 修复点2：使用TypeToken指定泛型类型，彻底消除"未经检查的转换"警告
-            Map<String, String> params = GsonUtils.getGson().fromJson(requestBody, STRING_STRING_MAP_TYPE);
-            
-            String action = params.get("action");
-            if (action == null) {
-                sendErrorResponse(exchange, StatusCodes.BAD_REQUEST, "操作类型不能为空（add/toggle）");
-                return;
-            }
+        // 使用异步接收完整请求体
+        exchange.getRequestReceiver().receiveFullString((ex, message) -> {
+            // 收到完整请求体后调度到工作线程处理（安全地做耗时IO与响应）
+            ex.dispatch(() -> {
+                try {
+                    if (message == null || message.trim().isEmpty()) {
+                        sendErrorResponse(ex, StatusCodes.BAD_REQUEST, "请求体为空");
+                        return;
+                    }
 
-            if ("add".equals(action)) {
-                // 添加白名单
-                String uuid = params.get("uuid");
-                String name = params.get("name");
-                if (uuid == null || name == null) {
-                    sendErrorResponse(exchange, StatusCodes.BAD_REQUEST, "玩家UUID/名称不能为空");
-                    return;
-                }
+                    Map<String, String> params;
+                    try {
+                        params = GsonUtils.getGson().fromJson(message, STRING_STRING_MAP_TYPE);
+                    } catch (Exception je) {
+                        plugin.getLogger().warning("⚠️ 解析白名单请求JSON失败：" + je.getMessage());
+                        sendErrorResponse(ex, StatusCodes.BAD_REQUEST, "请求体格式不正确（非JSON）");
+                        return;
+                    }
 
-                WhitelistEntry entry = new WhitelistEntry(uuid, name);
-                plugin.getDataManager().addWhitelistEntry(entry);
-                sendSuccessResponse(exchange, Map.of("success", true, "message", "白名单添加成功"));
-            } else if ("toggle".equals(action)) {
-                // 切换启用状态
-                String enabledStr = params.get("enabled");
-                if (enabledStr == null) {
-                    sendErrorResponse(exchange, StatusCodes.BAD_REQUEST, "启用状态不能为空（true/false）");
-                    return;
+                    if (params == null) {
+                        sendErrorResponse(ex, StatusCodes.BAD_REQUEST, "请求体格式不正确（空对象）");
+                        return;
+                    }
+
+                    String action = params.get("action");
+                    if (action == null) {
+                        sendErrorResponse(ex, StatusCodes.BAD_REQUEST, "操作类型不能为空（add/toggle）");
+                        return;
+                    }
+
+                    if ("add".equals(action)) {
+                        String uuid = params.get("uuid");
+                        String name = params.get("name");
+                        if (uuid == null || name == null || uuid.trim().isEmpty() || name.trim().isEmpty()) {
+                            sendErrorResponse(ex, StatusCodes.BAD_REQUEST, "玩家UUID/名称不能为空");
+                            return;
+                        }
+                        WhitelistEntry entry = new WhitelistEntry(uuid, name);
+                        plugin.getDataManager().addWhitelistEntry(entry);
+                        sendSuccessResponse(ex, Map.of("success", true, "message", "白名单添加成功"));
+                    } else if ("toggle".equals(action)) {
+                        String enabledStr = params.get("enabled");
+                        if (enabledStr == null) {
+                            sendErrorResponse(ex, StatusCodes.BAD_REQUEST, "启用状态不能为空（true/false）");
+                            return;
+                        }
+                        boolean enabled = Boolean.parseBoolean(enabledStr);
+                        plugin.getDataManager().setWhitelistEnabled(enabled);
+                        sendSuccessResponse(ex, Map.of("success", true, "message", "白名单已" + (enabled ? "启用" : "禁用")));
+                    } else {
+                        sendErrorResponse(ex, StatusCodes.BAD_REQUEST, "不支持的操作类型（仅add/toggle）");
+                    }
+                } catch (Exception e) {
+                    plugin.getLogger().severe("❌ 处理白名单操作失败：" + e.getMessage());
+                    sendErrorResponse(ex, StatusCodes.INTERNAL_SERVER_ERROR, "操作白名单失败：" + e.getMessage());
                 }
-                boolean enabled = Boolean.parseBoolean(enabledStr);
-                plugin.getDataManager().setWhitelistEnabled(enabled);
-                sendSuccessResponse(exchange, Map.of("success", true, "message", "白名单已" + (enabled ? "启用" : "禁用")));
-            } else {
-                sendErrorResponse(exchange, StatusCodes.BAD_REQUEST, "不支持的操作类型（仅add/toggle）");
-            }
-        } catch (Exception e) {
-            sendErrorResponse(exchange, StatusCodes.INTERNAL_SERVER_ERROR, "操作白名单失败：" + e.getMessage());
-        }
+            });
+        }, (ex, exception) -> {
+            // 错误回调也要调度到工作线程再发送响应
+            ex.dispatch(() -> {
+                plugin.getLogger().warning("⚠️ 接收白名单请求体失败：" + exception.getMessage());
+                sendErrorResponse(ex, StatusCodes.BAD_REQUEST, "无法读取请求体");
+            });
+        });
     }
 
     /**
      * 删除白名单
      */
     private void handleDeleteWhitelist(HttpServerExchange exchange) {
-        String uuid = exchange.getQueryParameters().get("uuid").getFirst();
-        if (uuid == null) {
+        var param = exchange.getQueryParameters().get("uuid");
+        if (param == null || param.isEmpty()) {
+            sendErrorResponse(exchange, StatusCodes.BAD_REQUEST, "玩家UUID不能为空");
+            return;
+        }
+        String uuid = param.getFirst();
+        if (uuid == null || uuid.trim().isEmpty()) {
             sendErrorResponse(exchange, StatusCodes.BAD_REQUEST, "玩家UUID不能为空");
             return;
         }
@@ -157,7 +188,7 @@ public class WhitelistHandler implements HttpHandler {
         Map<String, Object> response = new HashMap<>();
         response.put("success", false);
         response.put("message", message);
-        
+
         exchange.setStatusCode(statusCode);
         exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json;charset=UTF-8");
         exchange.getResponseSender().send(GsonUtils.getGson().toJson(response));

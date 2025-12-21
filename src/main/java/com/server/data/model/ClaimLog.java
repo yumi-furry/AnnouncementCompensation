@@ -7,14 +7,18 @@ import com.server.util.TimeUtils;
  * 对应JSON结构：{"id":"xxx","playerName":"玩家名","playerUUID":"玩家UUID","compensationId":"补偿ID","claimTime":"2025-12-19 10:00"}
  */
 public class ClaimLog {
+    // 数据库ID
+    private int id;
     // 日志唯一ID（UUID生成）
-    private String id;
+    private String logId;
     // 玩家名称
     private String playerName;
     // 玩家UUID
     private String playerUUID;
     // 领取的补偿ID
     private String compensationId;
+    // 补偿ID（数据库）
+    private int compensationInt;
     // 领取时间
     private String claimTime;
 
@@ -29,13 +33,47 @@ public class ClaimLog {
         this.claimTime = TimeUtils.getCurrentTimeStr();
     }
 
+    // 数据库构造方法
+    public ClaimLog(int id, String playerName, String playerUUID, int compensationInt) {
+        this.id = id;
+        this.playerName = playerName;
+        this.playerUUID = playerUUID;
+        this.compensationInt = compensationInt;
+        this.claimTime = TimeUtils.getCurrentTimeStr();
+    }
+
     // ====================== Getter/Setter ======================
-    public String getId() {
+    public int getId() {
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(int id) {
         this.id = id;
+    }
+
+    // 向后兼容的方法
+    public String getIdString() {
+        return logId;
+    }
+
+    public void setId(String id) {
+        this.logId = id;
+    }
+
+    public String getPlayerUuid() {
+        return playerUUID;
+    }
+
+    public void setPlayerUuid(String playerUuid) {
+        this.playerUUID = playerUuid;
+    }
+
+    public int getCompensationIdInt() {
+        return compensationInt;
+    }
+
+    public void setCompensationId(int compensationId) {
+        this.compensationInt = compensationId;
     }
 
     public String getPlayerName() {
