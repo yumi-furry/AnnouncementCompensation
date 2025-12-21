@@ -105,34 +105,28 @@ public class CommandHandler implements CommandExecutor {
     }
 
     /**
-     * 处理 /tpa [A] [B] 命令
-     * A要tp到B，需要B同意（如果A是管理员则不需要）
+     * 处理 /tpa <玩家> 命令
+     * 玩家A要tp到B，需要B同意（如果A是管理员则不需要）
      */
-    private boolean handleTPA(Player player, String[] args) {
-        if (args.length != 2) {
-            player.sendMessage(ColorUtils.toComponent("&c用法: /tpa <玩家A> <玩家B>"));
+    private boolean handleTPA(Player playerA, String[] args) {
+        if (args.length != 1) {
+            playerA.sendMessage(ColorUtils.toComponent("&c用法: /tpa <玩家>"));
             return true;
         }
 
-        Player playerA = Bukkit.getPlayer(args[0]);
-        Player playerB = Bukkit.getPlayer(args[1]);
-
-        if (playerA == null) {
-            player.sendMessage(ColorUtils.toComponent("&c玩家 " + args[0] + " 不在线！"));
-            return true;
-        }
+        Player playerB = Bukkit.getPlayer(args[0]);
 
         if (playerB == null) {
-            player.sendMessage(ColorUtils.toComponent("&c玩家 " + args[1] + " 不在线！"));
+            playerA.sendMessage(ColorUtils.toComponent("&c玩家 " + args[0] + " 不在线！"));
             return true;
         }
 
-        // 如果执行者是管理员，则直接TP
-        if (player.hasPermission("ac.web.*")) {
+        // 如果玩家A是管理员，则直接TP
+        if (playerA.hasPermission("ac.web.*")) {
             playerA.teleport(playerB.getLocation());
             playerA.sendMessage(ColorUtils.toComponent("&a管理员已将你传送到 " + playerB.getName() + " 的位置！"));
-            playerB.sendMessage(ColorUtils.toComponent("&a管理员已将 " + playerA.getName() + " 传送到你的位置！"));
-            plugin.getLogger().info("管理员 " + player.getName() + " 执行TPA命令，将 " + playerA.getName() + " 传送到 " + playerB.getName() + " 的位置");
+            playerB.sendMessage(ColorUtils.toComponent("&a管理员 " + playerA.getName() + " 已传送到你的位置！"));
+            plugin.getLogger().info("管理员 " + playerA.getName() + " 执行TPA命令，传送到 " + playerB.getName() + " 的位置");
             return true;
         }
 

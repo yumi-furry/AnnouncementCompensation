@@ -62,7 +62,7 @@ commands:
     permission-message: "&c你没有使用该命令的权限！"
   tpa:
     description: "请求传送到另一个玩家处"
-    usage: "/<command> <玩家A> <玩家B>"
+    usage: "/<command> <玩家>"
     permission: "ac.game.tpa"
     permission-message: "&c你没有使用该命令的权限！"
   tpaccept:
