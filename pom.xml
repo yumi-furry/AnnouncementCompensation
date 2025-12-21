@@ -80,11 +80,39 @@
             <artifactId>gson</artifactId>
             <version>${gson.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.sun.mail</groupId>
+            <artifactId>javax.mail</artifactId>
+            <version>1.6.2</version>
+        </dependency>
+        
+        <!-- 数据库支持 -->
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>8.0.33</version>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.6.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <version>2.2.224</version>
+        </dependency>
+        <dependency>
+            <groupId>com.zaxxer</groupId>
+            <artifactId>HikariCP</artifactId>
+            <version>5.0.1</version>
+        </dependency>
     </dependencies>
 
     <build>
         <finalName>${project.artifactId}-${project.version}</finalName>
         <resources>
+            <!-- 保持对 YAML 文件的过滤（例如占位符替换）-->
             <resource>
                 <directory>src/main/resources</directory>
                 <filtering>true</filtering>
@@ -94,10 +122,19 @@
                     <include>**/*.yml</include>
                 </includes>
             </resource>
+
+            <!-- 将 web/** 原样打包到 JAR 的 web/ 路径下（不进行过滤） -->
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <includes>
+                    <include>web/**</include>
+                </includes>
+            </resource>
         </resources>
 
+        <!-- 其余构建插件保持不变 -->
         <plugins>
-            <!-- ensure resources are read with UTF-8 to avoid MalformedInputException during filtering -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-resources-plugin</artifactId>
