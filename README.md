@@ -1,7 +1,7 @@
 # AnnouncementCompensation
 
 <div align="center">
-  <img src="https://img.shields.io/badge/Version-0.0.1-blue?color=%23165DFF&style=for-the-badge" alt="版本">
+  <img src="https://img.shields.io/badge/Version-0.2.1-blue?color=%23165DFF&style=for-the-badge" alt="版本">
   <img src="https://img.shields.io/badge/Minecraft-1.19.2-green?color=%2300B42A&style=for-the-badge" alt="MC版本">
   <img src="https://img.shields.io/badge/Server-Paper-orange?color=%23FF7D00&style=for-the-badge" alt="服务端">
   <img src="https://img.shields.io/badge/JDK-17+-red?color=%23F53F3F&style=for-the-badge" alt="JDK版本">

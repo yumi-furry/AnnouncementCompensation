@@ -1,7 +1,7 @@
 # 插件基础信息（必填）
 name: AnnouncementCompensation
 api: "1.19"
-version: 0.0.1
+version: 0.2.1
 main: com.server.AnnouncementCompensationPlugin
 api-version: 1.19  # 适配Paper 1.19.2，必须指定1.19（Bukkit/Paper 1.19+ 要求）
 authors: [ "玉米 <3783260249@qq.com>" ]
