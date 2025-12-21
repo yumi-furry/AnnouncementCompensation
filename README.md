@@ -8,56 +8,195 @@
   <img src="https://img.shields.io/badge/Language-Zh_cn-white?color=%23FFFFFF&style=for-the-badge" alt="适配的语言">
 </div>
 
-## 插件简介
-AnnouncementCompensation 是一款适配 **Paper 1.19.2** 服务器的公告与补偿管理插件，支持通过Web管理面板发布公告、配置玩家补偿（物品/道具）、记录发放记录，同时实现玩家上线自动推送公告、点击道具领取补偿等核心功能，轻量化设计且兼容主流服务器环境。
+一个功能丰富的Minecraft服务器公告与补偿管理插件，提供Web管理界面、安全配置检查、多端口服务等特性。
 
-### 维护信息
-- 作者: 玉米
-- 仓库: https://github.com/yumi-furry/AnnouncementCompensation
-- 联系邮箱: 3783260249@qq.com
-- 网站: https://plugin.furrynewyearseve.cn
-- 插件版本: 0.0.1
+## 功能特性
 
-### 核心特性
-| 功能模块 | 核心能力 |
-|----------|----------|
-| 📢 公告管理 | Web面板发布/编辑/删除公告、登录自动推送、优先级置顶 |
-| 🎁 补偿发放 | 自定义物品补偿、道具/指令领取、领取记录持久化 |
-| 💻 Web面板 | Undertow轻量部署、BCrypt登录认证、可视化配置 |
-| 📊 数据管理 | 自动备份、日志记录、数据恢复 |
+### 1. 公告管理
+- 创建、编辑、删除服务器公告
+- 登录后自动推送公告给玩家
+- 支持彩色文本格式
+- Web界面可视化管理
 
-## 环境要求
-| 依赖项 | 版本要求 | 说明 |
-|--------|----------|------|
-| 服务器核心 | Paper 1.19.2-307+ | 不兼容Spigot/CraftBukkit |
-| JDK | 17+ | 编译/运行环境均需 |
-| 额外依赖 | 无 | 插件内置所有业务依赖 |
-| 网络环境 | 本地访问 | 无需公网IP即可使用Web面板 |
+### 2. 补偿管理
+- 创建、发放游戏内补偿
+- 玩家通过领取券获取补偿
+- 补偿绑定玩家账号，防止重复领取
+- 支持自定义补偿道具名称和描述
 
-## 安装步骤
-1. 下载插件Jar包：`AnnouncementCompensation-0.0.1.jar`
-2. 将Jar包放入服务器 `plugins` 目录
-3. 启动/重启Paper服务器，插件自动生成配置文件与数据目录
-4. （可选）修改 `config.yml` 配置Web面板端口（默认8080），重启服务器生效
+### 3. 安全特性
+- 默认配置自动检测与警告
+- BCrypt密码加密存储
+- Token认证机制
+- 权限控制管理
+
+### 4. Web管理界面
+- 双端口设计：管理员面板(8080)和玩家面板(8081)
+- 响应式设计，支持移动设备访问
+- RESTful API接口
+
+### 5. 其他功能
+- 服务器图标自定义
+- SMTP邮件发送支持
+- QQ第三方登录（可选）
+- 多数据库支持（JSON/SQL）
+- 命令系统集成
+
+## 安装说明
+
+### 前置要求
+- Java 17+
+- Paper 1.19+服务器
+
+### 安装步骤
+1. 下载最新版本的插件JAR文件
+2. 将JAR文件放入服务器的`plugins`目录
+3. 启动服务器，插件会自动生成配置文件
+4. 编辑`plugins/AnnouncementCompensation/config.yml`配置文件
+5. 重启服务器使配置生效
 
 ## 配置说明
-### 核心配置文件（`plugins/AnnouncementCompensation/config.yml`）
+
+### 核心配置项
+
+#### Web管理面板
 ```yaml
-# Web管理面板配置
 web:
-  port: 8080                  # 访问端口
+  admin_port: 8080            # 管理员面板端口
+  player_port: 8081           # 玩家面板端口
+  domain: "localhost"         # 域名配置
   login:
-    username: admin           # 管理员账号（默认）
-    password: $2a$10$xxxxxx  # BCrypt加密密码（默认：admin123）
-# 公告配置
+    username: admin           # 管理员账号
+    password: "$2a$10$xxxxxx"  # BCrypt加密密码
+```
+
+#### 公告配置
+```yaml
 announcement:
-  enable: true                # 是否启用公告推送
-  delay: 3                    # 玩家登录后延迟N秒推送公告
-# 补偿配置
+  enable: true                # 启用公告推送
+  delay: 3                    # 登录后延迟推送时间（秒）
+```
+
+#### 补偿配置
+```yaml
 compensation:
   item:
-    material: PAPER           # 补偿领取道具材质（默认纸张）
-    name: "§6公告补偿领取券"   # 道具名称（支持颜色代码）
+    material: PAPER           # 补偿领取道具材质
+    name: "§6公告补偿领取券"   # 道具名称
     lore:                     # 道具描述
       - "§7点击领取服务器公告补偿"
-      - "§7领取后自动绑定账号"
+```
+
+#### SMTP邮件配置
+```yaml
+smtp:
+  enable: true                # 启用邮件发送
+  host: "smtp.gmail.com"      # SMTP服务器
+  port: 587                   # 端口
+  username: "your_email@gmail.com"  # 邮箱账号
+  password: "your_app_password"     # 邮箱密码
+```
+
+#### 数据库配置
+```yaml
+database:
+  storage: "json"             # 存储方式：json或sql
+  sql:
+    type: "mysql"             # 数据库类型
+    host: "localhost"         # 数据库主机
+    port: 3306                # 端口
+    database: "announcement_compensation"  # 数据库名
+    username: "root"          # 用户名
+    password: "password"      # 密码
+```
+
+## 命令说明
+
+### 玩家命令
+- `/compensation` 或 `/comp` - 查看和领取补偿
+- `/login <密码>` - 登录Web面板
+
+### 管理员命令
+- `/tpa <玩家>` - 请求传送至玩家
+- `/tpaccept` - 接受传送请求
+- `/tpdeny` - 拒绝传送请求
+
+## 安全最佳实践
+
+1. **修改默认配置**：
+   - 更改管理员账号密码
+   - 更新SMTP邮件配置
+   - 配置正确的数据库连接信息
+
+2. **端口安全**：
+   - 考虑使用反向代理（如Nginx）
+   - 设置防火墙规则，限制访问IP
+
+3. **密码管理**：
+   - 使用强密码
+   - 定期更新管理员密码
+
+## API文档
+
+### 认证机制
+所有API请求需要在请求头中包含`Authorization`字段：
+```
+Authorization: Bearer <token>
+```
+
+### 主要接口
+
+#### 公告接口
+- `GET /api/announcement` - 获取所有公告
+- `POST /api/announcement` - 创建新公告
+- `DELETE /api/announcement?id=xxx` - 删除公告
+
+#### 补偿接口
+- `GET /api/compensation` - 获取所有补偿
+- `POST /api/compensation` - 创建新补偿
+- `DELETE /api/compensation?id=xxx` - 删除补偿
+
+## 构建项目
+
+### 前置要求
+- Maven 3.6+
+- Java 17+
+
+### 构建命令
+```bash
+mvn clean package
+```
+
+构建产物将位于`target/`目录下。
+
+## 开发说明
+
+### 项目结构
+```
+├── src/main/java/com/server/
+│   ├── AnnouncementCompensationPlugin.java  # 插件主类
+│   ├── command/                           # 命令处理
+│   ├── data/                              # 数据管理
+│   ├── database/                          # 数据库操作
+│   ├── listener/                          # 事件监听器
+│   ├── util/                              # 工具类
+│   └── web/                               # Web服务
+└── src/main/resources/
+    ├── config.yml                         # 配置文件
+    └── web/                               # Web界面文件
+```
+
+## 问题反馈
+
+如遇到问题或有功能建议，请通过以下方式反馈：
+- 创建GitHub Issue
+- 发送邮件至开发者邮箱
+
+## 许可协议
+
+本项目采用CC BY-SA开源协议
+
+---
+
+版本：0.2.1
+最后更新：2025-12-21
